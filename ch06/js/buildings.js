@@ -57,6 +57,62 @@
 			{name:"damaged",count:1},
 		],
 		}, // end of starport
+		
+		"harvester":{
+			name:"harvester",
+			pixelWidth:40,
+			pixelHeight:60,
+			baseWidth:40,
+			baseHeight:20,
+			pixelOffsetX:-2,
+			pixelOffsetY:40,
+			buildableGrid:[
+				[1,1]
+			],
+			passableGrid:[
+				[1,1]
+			],
+			sight:3,
+			cost:5000,
+			hitPoints:300,
+			spriteImages:[
+				{name:"deploy",count:17},
+				{name:"healthy",count:3},
+				{name:"damaged",count:1},
+			],
+		}, // end of buidling-type harvester
+
+		"ground-turret":{
+		name:"ground-turret",
+		canAttack:true,
+		canAttackLand:true,
+		canAttackAir:false,
+		weaponType:"cannon-ball",
+		action:"guard", // Default action is guard unlike other buildings
+		direction:0, // Face upward (0) by default
+		directions:8, // Total of 8 turret directions allowed (0-7)
+		orders:{type:"guard"},
+		pixelWidth:38,
+		pixelHeight:32,
+		baseWidth:20,
+		baseHeight:18,
+		cost:1500,
+		pixelOffsetX:9,
+		pixelOffsetY:12,
+		buildableGrid:[
+			[1]
+		],
+		passableGrid:[
+			[1]
+		],
+		sight:5,
+		hitPoints:200,
+		spriteImages:[
+			{name:"teleport",count:9},
+			{name:"healthy",count:1,directions:8},
+			{name:"damaged",count:1},
+		],
+		}, // end of ground turret
 
 	}, // end of list
     defaults:{
@@ -72,7 +128,7 @@
 		if (this.life>this.hitPoints*0.4){
 			this.lifeCode = "healthy";
 		} else if (this.life <= 0){
-			this.lifeCode = "dead";
+			this.lifeCode = "dead";// this code is not used for image list  key
 			game.remove(this);
 			return;
 		} else {
@@ -134,6 +190,26 @@
                 this.action = "close";
             }
             break;
+		case "deploy":
+			this.imageList = this.spriteArray["deploy"];
+			this.imageOffset = this.imageList.offset + this.animationIndex;
+			this.animationIndex++;
+			// Once deploying is complete, go back to stand
+			if (this.animationIndex>=this.imageList.count){
+				this.animationIndex = 0;
+				this.action = "stand";
+			}
+			break;
+		case "guard":
+		if (this.lifeCode == "damaged"){
+			// The damaged turret has no directions
+			this.imageList = this.spriteArray[this.lifeCode];
+		} else {
+			// The healthy turret has 8 directions
+			this.imageList = this.spriteArray[this.lifeCode+"-"+this.direction];
+		}
+		 this.imageOffset = this.imageList.offset;
+		break;
 		}
 	
 	},  // end of animation()

@@ -15,9 +15,48 @@ var mouse = {
     // whether or not the mouse is inside the canvas region
     insideCanvas:false,
   
-    click:function(ev,rightClick){
-        // Player clicked inside the canvas
-    },
+click:function(ev,rightClick){
+    // Player clicked inside the canvas
+  
+    var clickedItem = this.itemUnderMouse();
+    var shiftPressed = ev.shiftKey;
+  
+    if (!rightClick){ // Player left clicked
+        if (clickedItem){
+            // Pressing shift adds to existing selection. If shift is not pressed, clear existing selection
+            if(!shiftPressed){
+                game.clearSelection();
+            }
+            game.selectItem(clickedItem,shiftPressed);
+        }
+    } else { // Player right clicked
+        // Handle actions like attacking and movement of selected units
+    }
+},
+itemUnderMouse:function(){
+    for (var i = game.items.length - 1; i >= 0; i--){
+        var item = game.items[i];
+        if (item.type=="buildings" || item.type=="terrain"){
+            if(item.lifeCode != "dead"
+                && item.x<= (mouse.gameX)/game.gridSize
+                && item.x >= (mouse.gameX - item.baseWidth)/game.gridSize
+                && item.y<= mouse.gameY/game.gridSize
+                && item.y >= (mouse.gameY - item.baseHeight)/game.gridSize
+                ){
+                    return item;
+            }
+        } else if (item.type=="aircraft"){
+            if (item.lifeCode != "dead" &&
+                Math.pow(item.x-mouse.gameX/game.gridSize,2) + Math.pow(item.y-(mouse.gameY+item.pixelShadowHeight)/game.gridSize,2) < Math.pow((item.radius)/game.gridSize,2)){
+                return item;
+            }
+       }else {
+            if (item.lifeCode != "dead" && Math.pow(item.x-mouse.gameX/game.gridSize,2) + Math.pow(item.y-mouse.gameY/game.gridSize,2) < Math.pow((item.radius)/game.gridSize,2)){
+                return item;
+            }
+        }
+    }
+},
   
     draw:function(){
         if(this.dragSelect){
@@ -75,15 +114,36 @@ var mouse = {
             return false;
         });
          
-        $mouseCanvas.mouseup(function(ev) {
-            var shiftPressed = ev.shiftKey;
-            if(ev.which==1){
-                //Left key was released
-                mouse.buttonPressed = false;
-                mouse.dragSelect = false;
-            }
-            return false;
-        });
+		$mouseCanvas.mouseup(function(ev) {
+			var shiftPressed = ev.shiftKey;
+			if(ev.which==1){
+			//Left key was released
+				if (mouse.dragSelect){
+					if (!shiftPressed){
+						// Shift key was not pressed
+						game.clearSelection();
+					}
+		  
+					var x1 = Math.min(mouse.gameX,mouse.dragX)/game.gridSize;
+					var y1 = Math.min(mouse.gameY,mouse.dragY)/game.gridSize;
+					var x2 = Math.max(mouse.gameX,mouse.dragX)/game.gridSize;
+					var y2 = Math.max(mouse.gameY,mouse.dragY)/game.gridSize;
+					for (var i = game.items.length - 1; i >= 0; i--){
+						var item = game.items[i];
+						if (item.type != "buildings" && item.selectable && item.team==game.team && x1<= item.x && x2 >= item.x){
+							if ((item.type == "vehicles" && y1<= item.y && y2 >= item.y)
+							|| (item.type == "aircraft" && (y1 <= item.y-item.pixelShadowHeight/game.gridSize) && (y2 >= item.y-item.pixelShadowHeight/game.gridSize))){
+								game.selectItem(item,shiftPressed);
+							}
+		  
+						}
+					};
+				}
+				mouse.buttonPressed = false;
+				mouse.dragSelect = false;
+			}
+			return false;
+		});
          
         $mouseCanvas.mouseleave(function(ev) {
             mouse.insideCanvas = false;
