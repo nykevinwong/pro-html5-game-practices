@@ -88,7 +88,7 @@ var game = {
 	panningSpeed:10, // Pixels to pan every drawing loop
 	handlePanning:function(){
 		// do not pan if mouse leaves the canvas
-		if (!mouse.insideCanvas || mouse.buttonPressed == false){
+		if (!mouse.insideCanvas){
 			return;
 		}
 	  
