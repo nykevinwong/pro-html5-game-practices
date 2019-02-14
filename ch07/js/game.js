@@ -41,6 +41,10 @@ var game = {
 	offsetY:0,
 	panningThreshold:60, // Distance from edge of canvas at which panning starts
 	panningSpeed:10, // Pixels to pan every drawing loop
+	//Movement related properties
+	speedAdjustmentFactor:1/64,
+	turnSpeedAdjustmentFactor:1/8,
+
 	handlePanning:function(){
 		// do not pan if mouse leaves the canvas
 		if (!mouse.insideCanvas){
@@ -77,6 +81,13 @@ var game = {
 		}
 	},
 	animationLoop:function(){
+		// Process orders for any item that handles it
+		for (var i = game.items.length - 1; i >= 0; i--){
+			if(game.items[i].processOrders){
+				game.items[i].processOrders();
+			}
+		};
+
 	    // Animate each of the elements within the game
 	    for (var i = game.items.length - 1; i >= 0; i--){
 	        game.items[i].animate();
@@ -199,5 +210,43 @@ var game = {
 			game.selectedItems.push(item);	        
 		}
 	},
+		// Send command to either singleplayer or multiplayer object
+	sendCommand:function(uids,details){
+		if (game.type=="singleplayer"){
+			singleplayer.sendCommand(uids,details);
+		} else {
+			multiplayer.sendCommand(uids,details);
+		}
+	},
+	getItemByUid:function(uid){
+		for (var i = game.items.length - 1; i >= 0; i--){
+			if(game.items[i].uid == uid){
+				return game.items[i];
+			}
+		};
+	},
+	// Receive command from singleplayer or multiplayer object and send it to units
+	processCommand:function(uids,details){
+		// In case the target "to" object is in terms of uid, fetch the target object
+		var toObject;
+		if (details.toUid){
+			toObject = game.getItemByUid(details.toUid);
+			if(!toObject || toObject.lifeCode=="dead"){
+				// To object no longer exists. Invalid command
+				return;
+			}
+		}
 	
+		for (var i in uids){
+			var uid = uids[i];
+			var item = game.getItemByUid(uid);
+			//if uid is a valid item, set the order for the item
+			if(item){
+				item.orders = $.extend([],details);
+				if(toObject) {
+					item.orders.to = toObject;
+				}
+			}
+		};
+	},
 }

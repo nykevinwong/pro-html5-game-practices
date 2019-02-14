@@ -17,20 +17,75 @@ var mouse = {
 
 	click:function(ev,rightClick){
 		// Player clicked inside the canvas
-
+	  
 		var clickedItem = this.itemUnderMouse();
 		var shiftPressed = ev.shiftKey;
-
+	  
 		if (!rightClick){ // Player left clicked
-			if (clickedItem){				
+			if (clickedItem){
 				// Pressing shift adds to existing selection. If shift is not pressed, clear existing selection
 				if(!shiftPressed){
 					game.clearSelection();
 				}
 				game.selectItem(clickedItem,shiftPressed);
 			}
-		} else { // Player right clicked
+		} else { // Player right-clicked
 			// Handle actions like attacking and movement of selected units
+			var uids = [];
+			if (clickedItem){ // Player right-clicked on something
+				if (clickedItem.type != "terrain"){
+					if (clickedItem.team != game.team){ // Player right-clicked on an enemy item
+						// Identify selected items from players team that can attack
+						for (var i = game.selectedItems.length - 1; i >= 0; i--){
+							var item = game.selectedItems[i];
+							if(item.team == game.team && item.canAttack){
+								uids.push(item.uid);
+							}
+						};
+						// then command them to attack the clicked item
+						if (uids.length>0){
+							game.sendCommand(uids,{type:"attack",toUid:clickedItem.uid});
+						}
+					} else  { // Player right-clicked on a friendly item
+						//identify selected items from players team that can move
+						for (var i = game.selectedItems.length - 1; i >= 0; i--){
+							var item = game.selectedItems[i];
+							if(item.team == game.team && (item.type == "vehicles" || item.type == "aircraft")){
+								uids.push(item.uid);
+							}
+						};
+						// then command them to guard the clicked item
+						if (uids.length>0){
+							game.sendCommand(uids,{type:"guard", toUid:clickedItem.uid});
+						}
+					}
+				} else if (clickedItem.name == "oilfield"){ // Player right licked on an oilfield
+					// identify the first selected harvester from players team (since only one can deploy at a time)
+					for (var i = game.selectedItems.length - 1; i >= 0; i--){
+						var item = game.selectedItems[i];
+						if(item.team == game.team && (item.type == "vehicles" && item.name == "harvester")){
+							uids.push(item.uid);
+							break;
+						}
+					};
+					// then command it to deploy on the oilfield
+					if (uids.length>0){
+						game.sendCommand(uids,{type:"deploy",toUid:clickedItem.uid});
+					}
+				}
+			} else { // Player clicked on the ground
+				//identify selected items from players team that can move
+				for (var i = game.selectedItems.length - 1; i >= 0; i--){
+					var item = game.selectedItems[i];
+					if(item.team == game.team && (item.type == "vehicles" || item.type == "aircraft")){
+						uids.push(item.uid);
+					}
+				};
+				// then command them to move to the clicked location
+				if (uids.length>0){
+					game.sendCommand(uids, {type:"move", to:{x:mouse.gameX/game.gridSize, y:mouse.gameY/game.gridSize}});
+				}
+			}
 		}
 	},
 	itemUnderMouse:function(){

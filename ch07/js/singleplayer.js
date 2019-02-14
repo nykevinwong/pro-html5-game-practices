@@ -70,6 +70,9 @@ var singleplayer = {
         game.animationLoop();                        
         game.animationInterval = setInterval(game.animationLoop,game.animationTimeout);
         game.start();
-    },   
-     
+	},   
+	
+	sendCommand:function(uids,details){
+		game.processCommand(uids,details);
+	}
 };
