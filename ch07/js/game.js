@@ -118,6 +118,8 @@ var game = {
 	        game.sortedItems[i].draw();
 	    };
 
+		game.drawPassableGrid();
+
 	    // Draw the mouse 
 	    mouse.draw()
 
@@ -150,7 +152,12 @@ var game = {
 	    // Add the item to the items array
 	    game.items.push(item);
 	    // Add the item to the type specific array
-	    game[item.type].push(item);        
+		game[item.type].push(item);        
+		
+		if(item.type == "buildings" || item.type == "terrain"){
+			game.currentMapPassableGrid = undefined;
+		}
+
 	    return item;        
 	},
 	remove:function(item){
@@ -177,7 +184,12 @@ var game = {
 	               game[item.type].splice(i,1);
 	               break;
 	           }
-	       };    
+		   };    
+		   
+	   if(item.type == "buildings" || item.type == "terrain"){
+			game.currentMapPassableGrid = undefined;
+		}
+
 	},
 	/* Selection Related Code */
 	selectionBorderColor:"rgba(255,255,0,0.5)",
@@ -249,4 +261,39 @@ var game = {
 			}
 		};
 	},
+
+	rebuildPassableGrid:function(){
+		game.currentMapPassableGrid = $.extend(true,[],game.currentMapTerrainGrid);
+		for (var i = game.items.length - 1; i >= 0; i--){
+			var item = game.items[i];
+			if(item.type == "buildings" || item.type == "terrain"){
+				for (var y = item.passableGrid.length - 1; y >= 0; y--){
+					for (var x = item.passableGrid[y].length - 1; x >= 0; x--){
+						if(item.passableGrid[y][x]){
+							game.currentMapPassableGrid[item.y+y][item.x+x] = 1;
+						}
+					};
+				};
+			}
+		};
+	},
+
+	drawPassableGrid: function() {
+		for (var y=0; y < 40; y++) {
+			for (var x=0; x< 60; x++) {
+			   if(game.currentMapTerrainGrid[y][x])
+				{
+					var x1 = x*20 - game.offsetX;
+					var y1 = y*20 - game.offsetY;
+
+					game.foregroundContext.strokeStyle = game.selectionBorderColor;	
+					game.foregroundContext.lineWidth = 1;
+					game.foregroundContext.fillStyle = game.selectionFillColor;
+					game.foregroundContext.fillRect(x1,y1,20,20);
+					game.foregroundContext.strokeRect(x1,y1,20,20);	
+				}
+
+			}
+		};
+	}
 }
