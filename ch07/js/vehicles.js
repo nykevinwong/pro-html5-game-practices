@@ -162,23 +162,40 @@ var vehicles = {
 					// Move towards destination until distance from destination is less than vehicle radius
 					var distanceFromDestinationSquared = (Math.pow(this.orders.to.x-this.x,2) + Math.pow(this.orders.to.y-this.y,2));
 					if (distanceFromDestinationSquared < Math.pow(this.radius/game.gridSize,2)) {
+						//Stop when within one radius of the destination
+						this.orders = {type:"stand"};
+						return;
+					} else if (distanceFromDestinationSquared <Math.pow(this.radius*3/game.gridSize,2)) {
+						//Stop when within 3 radius of the destination if colliding with something
 						this.orders = {type:"stand"};
 						return;
 					} else {
-						// Try to move to the destination
+						if (this.colliding && (Math.pow(this.orders.to.x-this.x,2) + Math.pow(this.orders.to.y-this.y,2))<Math.pow(this.radius*5/game.gridSize,2)) {
+							// Count collsions within 5 radius distance of goal
+							if (!this.orders.collisionCount){
+								this.orders.collisionCount = 1
+							} else {
+								this.orders.collisionCount ++;
+							}
+							// Stop if more than 30 collisions occur
+							if (this.orders.collisionCount > 30) {
+								this.orders = {type:"stand"};
+								return;
+							}
+						}
 						var moving = this.moveTo(this.orders.to);
+						// Pathfinding couldn't find a path so stop
 						if(!moving){
-							// Pathfinding couldn't find a path so stop
-							this.AStarPath= [];
+							this.AStarPath = [];
 							this.orders = {type:"stand"};
 							return;
 						}
 					}
 					break;
 			}
-		},
-		 
-		moveTo:function(destination) {
+		}, 
+
+		moveTo:function(destination){
 			if(!game.currentMapPassableGrid){
 				game.rebuildPassableGrid();
 			}
@@ -192,7 +209,7 @@ var vehicles = {
 			if(destination.type == "buildings"||destination.type == "terrain"){
 				grid[Math.floor(destination.y)][Math.floor(destination.x)] = 0;
 			}
-			this.AStarPath = [];
+		  
 			var newDirection;
 			// if vehicle is outside map bounds, just go straight towards goal
 			if (start[1]<0 || start[1]>=game.currentLevel.mapGridHeight || start[0]<0 || start[0]>= game.currentLevel.mapGridWidth){
@@ -201,12 +218,12 @@ var vehicles = {
 			} else {
 				//Use A* algorithm to try and find a path to the destination
 				this.orders.path = AStar(grid,start,end,'Euclidean');
-				this.AStarPath = this.orders.path;
+				this.AStarPath = this.orders.path;				
 				if (this.orders.path.length>1){
 					var nextStep = {x:this.orders.path[1].x+0.5,y:this.orders.path[1].y+0.5};
 					newDirection = findAngle(nextStep,this,this.directions);
 				} else if(start[0]==end[0] && start[1] == end[1]){
-					// Reached destination grid;
+					// Reached destination grid square
 					this.orders.path = [this,destination];
 					newDirection = findAngle(destination,this,this.directions);
 				} else {
@@ -215,26 +232,68 @@ var vehicles = {
 				}
 			}
 		  
+			// check if moving along current direction might cause collision..
+			// If so, change newDirection
+			var collisionObjects = this.checkCollisionObjects(grid);
+			this.hardCollision = false;
+			if (collisionObjects.length>0){
+				this.colliding = true;
+		  
+				// Create a force vector object that adds up repulsion from all colliding objects
+				var forceVector = {x:0,y:0}
+				// By default, the next step has a mild attraction force
+				collisionObjects.push({collisionType:"attraction", with:{x:this.orders.path[1].x+0.5,y:this.orders.path[1].y+0.5}});
+				for (var i = collisionObjects.length - 1; i >= 0; i--){
+					var collObject = collisionObjects[i];
+					var objectAngle = findAngle(collObject.with,this,this.directions);
+					var objectAngleRadians = -(objectAngle/this.directions)* 2*Math.PI;
+					var forceMagnitude;
+					switch(collObject.collisionType){
+						case "hard":
+							forceMagnitude = 2;
+							this.hardCollision = true;
+							break;
+						case "soft":
+							forceMagnitude = 1;
+							break;
+						case "attraction":
+							forceMagnitude = -0.25;
+							break;
+					}
+			 
+					forceVector.x += (forceMagnitude*Math.sin(objectAngleRadians));
+					forceVector.y += (forceMagnitude*Math.cos(objectAngleRadians));
+				};
+				// Find a new direction based on the force vector
+				newDirection = findAngle(forceVector,{x:0,y:0},this.directions);
+			} else {
+				this.colliding = false;
+			}
+			 
 			// Calculate turn amount for new direction
 			var difference = angleDiff(this.direction,newDirection,this.directions);
 			var turnAmount = this.turnSpeed*game.turnSpeedAdjustmentFactor;
 		  
-			// Move forward, but keep turning as needed
-			var movement = this.speed*game.speedAdjustmentFactor;
-			var angleRadians = -(Math.round(this.direction)/this.directions)*2*Math.PI;
-			this.lastMovementX = - (movement*Math.sin(angleRadians));
-			this.lastMovementY = - (movement*Math.cos(angleRadians));
-			this.x = (this.x +this.lastMovementX);
-			this.y = (this.y +this.lastMovementY);
-			 
-			if (Math.abs(difference)>turnAmount){
-				this.direction = wrapDirection(this.direction + turnAmount*Math.abs(difference)/difference, this.directions);
+			// Either turn or move forward based on collision type
+			if (this.hardCollision){
+				// In case of hard collision, do not move forward, just turn towards new direction
+				if (Math.abs(difference)>turnAmount){
+					this.direction = wrapDirection(this.direction+ turnAmount*Math.abs(difference)/difference, this.directions);
+				}
+			} else {
+				// Otherwise, move forward, but keep turning as needed
+				var movement = this.speed*game.speedAdjustmentFactor;
+				var angleRadians = -(Math.round(this.direction)/this.directions)* 2*Math.PI ;
+				this.lastMovementX = - (movement*Math.sin(angleRadians));
+				this.lastMovementY = - (movement*Math.cos(angleRadians));
+				this.x = (this.x +this.lastMovementX);
+				this.y = (this.y +this.lastMovementY);
+				if (Math.abs(difference)>turnAmount){
+					this.direction = wrapDirection(this.direction+ turnAmount*Math.abs(difference)/difference, this.directions);
+				}
 			}
-		  
 			return true;
 		},
-	},
-
 		// Make a list of collisions that the vehicle will have if it goes along present path
 	checkCollisionObjects:function(grid){
 		// Calculate new position on present path
@@ -280,7 +339,7 @@ var vehicles = {
 	
 		return collisionObjects;
 	},
-
-	load:loadItem,
+	
+},	load:loadItem,
 	add:addItem,	
 }
