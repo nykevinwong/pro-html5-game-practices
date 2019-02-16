@@ -29,6 +29,21 @@ var mouse = {
 				}
 				game.selectItem(clickedItem,shiftPressed);
 			}
+			else
+				{
+					var uids = [];
+								//identify selected items from players team that can move
+					for (var i = game.selectedItems.length - 1; i >= 0; i--){
+						var item = game.selectedItems[i];
+						if(item.team == game.team && (item.type == "vehicles" || item.type == "aircraft")){
+							uids.push(item.uid);
+						}
+					};
+					// then command them to move to the clicked location
+					if (uids.length>0){
+						game.sendCommand(uids, {type:"move", to:{x:mouse.gameX/game.gridSize, y:mouse.gameY/game.gridSize}});
+					}
+				}
 		} else { // Player right-clicked
 			// Handle actions like attacking and movement of selected units
 			var uids = [];
