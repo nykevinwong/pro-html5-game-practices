@@ -184,16 +184,28 @@ var buildings = {
 						this.action = "close";
 					}
 					break;
-				case "deploy":
+					case "deploy":
 					this.imageList = this.spriteArray["deploy"];
 					this.imageOffset = this.imageList.offset + this.animationIndex;
 					this.animationIndex++;
-					// Once deploying is complete, go back to stand
-					if (this.animationIndex>=this.imageList.count){                
-					    this.animationIndex = 0;  
-						this.action = "stand";
+					// Once deploying is complete, go to harvest now
+					if (this.animationIndex>=this.imageList.count){
+						this.animationIndex = 0;
+						this.action = "harvest";
 					}
-					break;																
+					break;
+				case "harvest":
+					this.imageList = this.spriteArray[this.lifeCode];
+					this.imageOffset = this.imageList.offset + this.animationIndex;
+					this.animationIndex++;
+					if (this.animationIndex>=this.imageList.count){
+						this.animationIndex = 0;
+						if (this.lifeCode == "healthy"){
+							// Harvesters mine 2 credits of cash per animation cycle
+							game.cash[this.team] += 2;
+						}
+					}
+					break;															
 				case "guard":
 					if (this.lifeCode == "damaged"){
 						// The damaged turret has no directions
