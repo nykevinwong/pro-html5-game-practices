@@ -97,11 +97,26 @@ var game = {
 	       game.sortedItems = $.extend([],game.items);        
 	       game.sortedItems.sort(function(a,b){
 	        return b.y-a.y + ((b.y==a.y)?(a.x-b.x):0);
-	       });
+		   });
+		   
+		    //Save the time that the last animation loop completed
+	    game.lastAnimationTime = (new Date()).getTime();
 	},    
 	drawingLoop:function(){    
 	    // Handle Panning the Map    
 	    game.handlePanning();
+
+		    // Check the time since the game was animated and calculate a linear interpolation factor (-1 to 0)
+		// since drawing will happen more often than animation
+		game.lastDrawTime = (new Date()).getTime();
+		if (game.lastAnimationTime){
+			game.drawingInterpolationFactor = (game.lastDrawTime-game.lastAnimationTime)/game.animationTimeout - 1;
+			if (game.drawingInterpolationFactor>0){ // No point interpolating beyond the next animation loop ...
+				game.drawingInterpolationFactor = 0;
+			}
+		} else {
+		game.drawingInterpolationFactor = -1;
+		}
 
 	    // Since drawing the background map is a fairly large operation, 
 	    // we only redraw the background if it changes (due to panning)
