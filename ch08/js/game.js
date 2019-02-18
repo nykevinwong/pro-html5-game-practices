@@ -77,6 +77,9 @@ var game = {
 		}
 	},
 	animationLoop:function(){
+		   // Animate the Sidebar
+		   sidebar.animate();
+		   
 		// Process orders for any item that handles it
 		for (var i = game.items.length - 1; i >= 0; i--){
 			if(game.items[i].processOrders){
