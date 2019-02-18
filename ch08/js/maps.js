@@ -42,6 +42,30 @@ var maps = {
 				"green":1000
 			},
 
+			/* Conditional and Timed Trigger Events */
+			"triggers":[
+				/* Timed Events*/
+				{"type":"timed","time":1000,
+					"action":function(){
+						game.showMessage("system","You have 20 seconds left.\nGet the harvester near the oil field.");
+					}
+				},
+				{"type":"timed","time":21000,
+					"action":function(){
+						singleplayer.endLevel(false);
+					}
+				},
+				/* Conditional Event */
+				{"type":"conditional",
+					"condition":function(){
+						var transport = game.getItemByUid(-1);
+						return (transport.x <10 && transport.y <10);
+					},
+					"action":function(){
+						singleplayer.endLevel(true);
+					}
+				}
+			],
 		}
 	]
 }

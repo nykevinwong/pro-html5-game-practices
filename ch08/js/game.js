@@ -28,6 +28,13 @@ var game = {
 		game.refreshBackground = true;
 		
 		game.drawingLoop();
+
+		$('#gamemessages').html("");
+        // Initialize All Game Triggers
+        for (var i = game.currentLevel.triggers.length - 1; i >= 0; i--){
+            game.initTrigger(game.currentLevel.triggers[i]);
+		};
+		
     },
 	
 	// The map is broken into square tiles of this size (20 pixels x 20 pixels)
@@ -342,4 +349,89 @@ var game = {
 			}
 		};
 	},
+	/* Message Box related code*/
+	messageBoxOkCallback:undefined,
+	messageBoxCancelCallback:undefined,
+	showMessageBox:function(message,onOK,onCancel){
+		// Set message box text
+		$('#messageboxtext').html(message);
+		
+		// Set message box ok and cancel handlers and enable buttons
+		if(!onOK){
+			game.messageBoxOkCallback = undefined;
+		} else {
+			game.messageBoxOkCallback = onOK;
+		}
+		if(!onCancel){
+			game.messageBoxCancelCallback = undefined;
+			$("#messageboxcancel").hide();
+		} else {
+			game.messageBoxCancelCallback = onCancel;
+			$("#messageboxcancel").show();
+		}
+	
+		// Display the message box and wait for user to click a button
+		$('#messageboxscreen').show();
+	},
+	messageBoxOK:function(){
+		$('#messageboxscreen').hide();
+		if(game.messageBoxOkCallback){
+			game.messageBoxOkCallback()
+		}
+	},
+	messageBoxCancel:function(){
+		$('#messageboxscreen').hide();
+		if(game.messageBoxCancelCallback){
+			game.messageBoxCancelCallback();
+		}
+	},
+
+	// Methods for handling triggered events within the game
+	initTrigger:function(trigger){
+		if(trigger.type == "timed"){
+			trigger.timeout = setTimeout (function(){
+				game.runTrigger(trigger);
+			},trigger.time)
+		} else if(trigger.type == "conditional"){
+			trigger.interval = setInterval (function(){
+				game.runTrigger(trigger);
+			},1000)
+		}
+	},
+	runTrigger:function(trigger){
+		if(trigger.type == "timed"){
+			// Re initialize the trigger based on repeat settings
+			if (trigger.repeat){
+				game.initTrigger(trigger);
+			}
+			// Call the trigger action
+			trigger.action(trigger);
+		} else if (trigger.type == "conditional"){
+			//Check if the condition has been satisfied
+			if(trigger.condition()){
+				// Clear the trigger
+				game.clearTrigger(trigger);
+				// Call the trigger action
+				trigger.action(trigger);
+			}
+		}
+	},
+	clearTrigger:function(trigger){
+		if(trigger.type == "timed"){
+			clearTimeout(trigger.timeout);
+		} else if (trigger.type == "conditional"){
+			clearInterval(trigger.interval);
+		}
+	},
+	end:function(){
+		// Clear Any Game Triggers
+		if (game.currentLevel.triggers){
+			for (var i = game.currentLevel.triggers.length - 1; i >= 0; i--){
+				game.clearTrigger(game.currentLevel.triggers[i]);
+			};
+		}
+		game.running = false;
+	}
+
+	
 }
