@@ -15,6 +15,16 @@ var sidebar = {
         $("#wraithbutton").click(function(){
             sidebar.constructAtStarport({type:"aircraft","name":"wraith"});
         });
+
+        //Initialize building construction buttons
+
+        $("#starportbutton").click(function(){
+            game.deployBuilding = "starport";
+        });
+        $("#turretbutton").click(function(){
+            game.deployBuilding = "ground-turret";
+        });
+        
     },
     constructAtStarport:function(unitDetails){
         var starport;
@@ -88,8 +98,48 @@ if(game.currentLevel.requirements.vehicles.indexOf('heavy-tank')>-1 && cashBalan
     animate:function(){
         // Display the current cash balance value
         $('#cash').html(game.cash[game.team]);
-  
         //  Enable or disable buttons as appropriate
         this.enableSidebarButtons();
+         
+        if (game.deployBuilding){
+            // Create the buildable grid to see where building can be placed
+            game.rebuildBuildableGrid();
+            // Compare with buildable grid to see where we need to place the building
+            var placementGrid = buildings.list[game.deployBuilding].buildableGrid;
+            game.placementGrid = $.extend(true,[],placementGrid);
+            game.canDeployBuilding = true;
+            for (var i = game.placementGrid.length - 1; i >= 0; i--){
+                for (var j = game.placementGrid[i].length - 1; j >= 0; j--){
+                    if(game.placementGrid[i][j] &&
+                        (mouse.gridY+i>= game.currentLevel.mapGridHeight || mouse.gridX+j>=game.currentLevel.mapGridWidth || game.currentMapBuildableGrid[mouse.gridY+i][mouse.gridX+j]==1)){
+                        game.canDeployBuilding = false;
+                        game.placementGrid[i][j] = 0;
+                    }
+                };
+            };
+        }
     },
+
+    cancelDeployingBuilding:function(){
+        game.deployBuilding = undefined;
+    },
+    finishDeployingBuilding:function(){
+        var buildingName= game.deployBuilding;
+        var base;
+        for (var i = game.selectedItems.length - 1; i >= 0; i--){
+            var item = game.selectedItems[i];
+            if (item.type == "buildings" && item.name == "base" && item.team == game.team && item.lifeCode == "healthy" && item.action=="stand"){
+                base = item;
+                break;
+            }
+        };
+      
+        if (base){
+            var buildingDetails = {type:"buildings",name:buildingName,x:mouse.gridX,y:mouse.gridY};
+            game.sendCommand([base.uid],{type:"construct-building",details:buildingDetails});
+        }
+         
+        // Clear deployBuilding flag
+        game.deployBuilding = undefined;
+    }
 }

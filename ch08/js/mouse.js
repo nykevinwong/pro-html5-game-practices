@@ -22,6 +22,16 @@ var mouse = {
 		var shiftPressed = ev.shiftKey;
 
 		if (!rightClick){ // Player left clicked
+			if (game.deployBuilding){
+				if(game.canDeployBuilding){
+					sidebar.finishDeployingBuilding();
+				} else {
+					game.showMessage("system","Warning! Cannot deploy building here.");
+				}
+	  
+				return;
+			}
+
 			if (clickedItem){				
 				// Pressing shift adds to existing selection. If shift is not pressed, clear existing selection
 				if(!shiftPressed){
@@ -30,6 +40,13 @@ var mouse = {
 				game.selectItem(clickedItem,shiftPressed);
 			}
 		} else { // Player right clicked
+
+			// If the game is in deployBuilding mode, right clicking will cancel deployBuilding mode
+			if (game.deployBuilding){
+				sidebar.cancelDeployingBuilding();
+				return;
+			}
+			
 			// Handle actions like attacking and movement of selected units			
 			var uids = [];			
 			if (clickedItem){ // Player right clicked on something... Specific action
@@ -109,14 +126,29 @@ var mouse = {
 		}
 	},
 	draw:function(){
-	    if(this.dragSelect){    
-	        var x = Math.min(this.gameX,this.dragX);
-	        var y = Math.min(this.gameY,this.dragY);
-	        var width = Math.abs(this.gameX-this.dragX)
-	        var height = Math.abs(this.gameY-this.dragY)
-	        game.foregroundContext.strokeStyle = 'white';
-		    game.foregroundContext.strokeRect(x-game.offsetX,y-	game.offsetY, width, height);
-	    }	
+		if(this.dragSelect){
+			var x = Math.min(this.gameX,this.dragX);
+			var y = Math.min(this.gameY,this.dragY);
+			var width = Math.abs(this.gameX-this.dragX)
+			var height = Math.abs(this.gameY-this.dragY)
+			game.foregroundContext.strokeStyle = 'white';
+			game.foregroundContext.strokeRect(x-game.offsetX,y-    game.offsetY, width, height);
+		}
+		if (game.deployBuilding && game.placementGrid){
+			var buildingType = buildings.list[game.deployBuilding];
+			var x = (this.gridX*game.gridSize)-game.offsetX;
+			var y = (this.gridY*game.gridSize)-game.offsetY;
+			for (var i = game.placementGrid.length - 1; i >= 0; i--){
+				for (var j = game.placementGrid[i].length - 1; j >= 0; j--){
+					if(game.placementGrid[i][j]){
+						game.foregroundContext.fillStyle = "rgba(0,0,255,0.3)";
+					} else {
+						game.foregroundContext.fillStyle = "rgba(255,0,0,0.3)";
+					}
+					game.foregroundContext.fillRect(x+j*game.gridSize, y+i*game.gridSize, game.gridSize, game.gridSize);
+				};
+			};
+		}
 	},
 	calculateGameCoordinates:function(){
 		mouse.gameX = mouse.x + game.offsetX ;

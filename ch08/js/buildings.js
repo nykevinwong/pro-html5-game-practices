@@ -26,48 +26,18 @@ var buildings = {
 				{name:"damaged",count:1},
 				{name:"contructing",count:3},				
 			],
-
+		
 			processOrders:function(){
 				switch (this.orders.type){
-					case "construct-unit":
-						if(this.lifeCode != "healthy"){
-							return;
-						}
-						// First make sure there is no unit standing on top of the building
-						var unitOnTop = false;
-						for (var i = game.items.length - 1; i >= 0; i--){
-							var item = game.items[i];
-							if (item.type == "vehicles" || item.type == "aircraft"){
-								 if (item.x > this.x && item.x < this.x+2 && item.y> this.y && item.y<this.y+3){
-									unitOnTop = true;
-									break;
-								}
-							}
-						};
-		  
-						var cost = window[this.orders.details.type].list[this.orders.details.name].cost;
-						if (unitOnTop){
-							if (this.team == game.team){
-								game.showMessage("system","Warning! Cannot teleport unit while landing bay is occupied.");
-							}
-						} else if(game.cash[this.team]<cost){
-							if (this.team == game.team){
-								game.showMessage("system","Warning! Insufficient Funds. Need "+cost+ " credits.");
-							}
-						} else {
-							this.action="open";
-							this.animationIndex = 0;
-							// Position new unit above center of starport
-							var itemDetails = this.orders.details;
-							itemDetails.x = this.x+0.5*this.pixelWidth/game.gridSize;
-							itemDetails.y = this.y+0.5*this.pixelHeight/game.gridSize;
-							// Teleport in unit and subtract the cost from player cash
-							itemDetails.action="teleport";
-							itemDetails.team = this.team;
-							game.cash[this.team] -= cost;
-							this.constructUnit = $.extend(true,[],itemDetails);
-		  
-						}
+					case "construct-building":
+						this.action="construct";
+						this.animationIndex = 0;
+						var itemDetails = this.orders.details;
+						// Teleport in building and subtract the cost from player cash
+						itemDetails.team = this.team;
+						itemDetails.action = "teleport";
+						var item = game.add(itemDetails);
+						game.cash[this.team] -= item.cost;
 						this.orders = {type:"stand"};
 						break;
 				}

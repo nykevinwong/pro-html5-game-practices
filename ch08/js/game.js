@@ -315,4 +315,31 @@ var game = {
 			}							
 		};		
 	},
+	rebuildBuildableGrid:function(){
+		game.currentMapBuildableGrid = $.extend(true,[],game.currentMapTerrainGrid);
+		for (var i = game.items.length - 1; i >= 0; i--){
+			var item = game.items[i];
+			if(item.type == "buildings" || item.type == "terrain"){
+				for (var y = item.buildableGrid.length - 1; y >= 0; y--){
+					for (var x = item.buildableGrid[y].length - 1; x >= 0; x--){
+						if(item.buildableGrid[y][x]){
+							game.currentMapBuildableGrid[item.y+y][item.x+x] = 1;
+						}
+					};
+				};
+			} else if (item.type == "vehicles"){
+				// Mark all squares under or near the vehicle as unbuildable
+				var radius = item.radius/game.gridSize;
+				var x1 = Math.max(Math.floor(item.x - radius),0);
+				var x2 = Math.min(Math.floor(item.x + radius),game.currentLevel.mapGridWidth-1);
+				var y1 = Math.max(Math.floor(item.y - radius),0);
+				var y2 = Math.min(Math.floor(item.y + radius),game.currentLevel.mapGridHeight-1);
+				for (var x=x1; x <= x2; x++) {
+					for (var y=y1; y <= y2; y++) {
+						game.currentMapBuildableGrid[y][x] = 1;
+					};
+				};
+			}
+		};
+	},
 }
