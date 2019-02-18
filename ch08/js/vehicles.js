@@ -297,6 +297,24 @@ var vehicles = {
 			}
 	
 			switch (this.action){
+				case "teleport":
+				var direction = wrapDirection(Math.round(this.direction),this.directions);
+				this.imageList = this.spriteArray["stand-"+direction];
+				this.imageOffset = this.imageList.offset + this.animationIndex;
+				this.animationIndex++;
+			  
+				if (this.animationIndex>=this.imageList.count){
+					this.animationIndex = 0;
+				}
+				if (!this.brightness){
+					this.brightness = 1;
+				}
+				this.brightness -= 0.05;
+				if(this.brightness <= 0){
+					this.brightness = undefined;
+					this.action = "stand";
+				}
+				break;
 				case "stand":
 					var direction = wrapDirection(Math.round(this.direction),this.directions);
 					this.imageList = this.spriteArray["stand-"+direction];
@@ -345,7 +363,16 @@ var vehicles = {
 			var colorOffset = colorIndex*this.pixelHeight;
 
 			game.foregroundContext.drawImage(this.spriteSheet, this.imageOffset*this.pixelWidth,colorOffset,
-		           this.pixelWidth,this.pixelHeight,x,y,this.pixelWidth,this.pixelHeight);
+				   this.pixelWidth,this.pixelHeight,x,y,this.pixelWidth,this.pixelHeight);
+				   
+				     // Draw glow while teleporting in
+			if(this.brightness){
+				game.foregroundContext.beginPath();
+				game.foregroundContext.arc(x+ this.pixelOffsetX, y+this.pixelOffsetY, this.radius, 0 , Math.PI*2,false);
+				game.foregroundContext.fillStyle = 'rgba(255,255,255,'+this.brightness+')';
+				game.foregroundContext.fill();
+			}
+	
 		}
 	},
 	load:loadItem,

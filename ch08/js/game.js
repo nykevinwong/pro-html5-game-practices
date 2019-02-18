@@ -7,6 +7,7 @@ var game = {
 	init: function(){
 		loader.init();
 		mouse.init();
+		sidebar.init();
 
 		$('.gamelayer').hide();
 		$('#gamestartscreen').show();
@@ -41,6 +42,32 @@ var game = {
 	offsetY:0,
 	panningThreshold:60, // Distance from edge of canvas at which panning starts
 	panningSpeed:10, // Pixels to pan every drawing loop
+	// Functions for communicating with player
+	characters: {
+		"system":{
+			"name":"System",
+			"image":"images/characters/system.png"
+		}
+	},
+	showMessage:function(from,message){
+		var character = game.characters[from];
+		if (character){
+			from = character.name;
+			if (character.image){
+				$('#callerpicture').html('<img src="'+character.image+'"/>');
+				// hide the profile picture after six seconds
+				setTimeout(function(){
+					$('#callerpicture').html("");
+				},6000)
+			}
+		}
+		// Append message to messages pane and scroll to the bottom
+		var existingMessage = $('#gamemessages').html();
+		var newMessage = existingMessage+'<span>'+from+': </span>'+message+'<br>';
+		$('#gamemessages').html(newMessage);
+		$('#gamemessages').animate({scrollTop:$('#gamemessages').prop('scrollHeight')});
+	},
+
 	handlePanning:function(){
 		// do not pan if mouse leaves the canvas
 		if (!mouse.insideCanvas){
@@ -79,7 +106,7 @@ var game = {
 	animationLoop:function(){
 		   // Animate the Sidebar
 		   sidebar.animate();
-		   
+
 		// Process orders for any item that handles it
 		for (var i = game.items.length - 1; i >= 0; i--){
 			if(game.items[i].processOrders){
