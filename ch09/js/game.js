@@ -3,7 +3,7 @@ $(window).load(function() {
 });
 
 var game = {
-	 // Start preloading assets
+    // Start preloading assets
 	init: function(){
 		loader.init();
 		mouse.init();
@@ -25,15 +25,16 @@ var game = {
         $('.gamelayer').hide();
         $('#gameinterfacescreen').show();
 		game.running = true;
-		game.refreshBackground = true;		
+		game.refreshBackground = true;
+		
 		game.drawingLoop();
-		
+
 		$('#gamemessages').html("");
-		
-		// Initialize All Game Triggers
-		for (var i = game.currentLevel.triggers.length - 1; i >= 0; i--){
-			game.initTrigger(game.currentLevel.triggers[i]);
+        // Initialize All Game Triggers
+        for (var i = game.currentLevel.triggers.length - 1; i >= 0; i--){
+            game.initTrigger(game.currentLevel.triggers[i]);
 		};
+		
     },
 	
 	// The map is broken into square tiles of this size (20 pixels x 20 pixels)
@@ -48,6 +49,32 @@ var game = {
 	offsetY:0,
 	panningThreshold:60, // Distance from edge of canvas at which panning starts
 	panningSpeed:10, // Pixels to pan every drawing loop
+	// Functions for communicating with player
+	characters: {
+		"system":{
+			"name":"System",
+			"image":"images/characters/system.png"
+		}
+	},
+	showMessage:function(from,message){
+		var character = game.characters[from];
+		if (character){
+			from = character.name;
+			if (character.image){
+				$('#callerpicture').html('<img src="'+character.image+'"/>');
+				// hide the profile picture after six seconds
+				setTimeout(function(){
+					$('#callerpicture').html("");
+				},6000)
+			}
+		}
+		// Append message to messages pane and scroll to the bottom
+		var existingMessage = $('#gamemessages').html();
+		var newMessage = existingMessage+'<span>'+from+': </span>'+message+'<br>';
+		$('#gamemessages').html(newMessage);
+		$('#gamemessages').animate({scrollTop:$('#gamemessages').prop('scrollHeight')});
+	},
+
 	handlePanning:function(){
 		// do not pan if mouse leaves the canvas
 		if (!mouse.insideCanvas){
@@ -84,8 +111,8 @@ var game = {
 		}
 	},
 	animationLoop:function(){
-		// Animate the Sidebar
-		sidebar.animate();
+		   // Animate the Sidebar
+		   sidebar.animate();
 
 		// Process orders for any item that handles it
 		for (var i = game.items.length - 1; i >= 0; i--){
@@ -136,9 +163,15 @@ var game = {
 	
 		// Start drawing the foreground elements
 		for (var i = game.sortedItems.length - 1; i >= 0; i--){
-			game.sortedItems[i].draw();
+			if (game.sortedItems[i].type != "bullets"){
+				game.sortedItems[i].draw();
+			}
 		};
-
+				
+		// Draw the bullets on top of all the other elements
+		for (var i = game.bullets.length - 1; i >= 0; i--){
+			game.bullets[i].draw();
+		};
 		// Draw the mouse 
 		mouse.draw()
 
@@ -159,6 +192,7 @@ var game = {
 		game.triggeredEvents = [];
 		game.selectedItems = [];
 		game.sortedItems = [];
+		game.bullets = [];
 	},
 	add:function(itemDetails) {
 		// Set a unique id for the item
@@ -307,7 +341,7 @@ var game = {
 						}
 					};
 				};
-			} else if (item.type == "vehicles"){	
+			} else if (item.type == "vehicles"){
 				// Mark all squares under or near the vehicle as unbuildable
 				var radius = item.radius/game.gridSize;
 				var x1 = Math.max(Math.floor(item.x - radius),0);
@@ -319,34 +353,8 @@ var game = {
 						game.currentMapBuildableGrid[y][x] = 1;
 					};
 				};
-
-			}							
-		};		
-	},
-	// Functions for communicating with player
-	characters: {
-		"system":{
-			"name":"System",
-			"image":"images/characters/system.png"
-		}				
-	},
-	showMessage:function(from,message){
-		var character = game.characters[from];		
-		if (character){
-			from = character.name;
-			if (character.image){
-				$('#callerpicture').html('<img src="'+character.image+'"/>');
-				// hide the profile picture after four seconds
-				setTimeout(function(){
-					$('#callerpicture').html("");
-				},4000)	
 			}
-		}
-		// Append message to messages pane and scroll to the bottom
-		var existingMessage = $('#gamemessages').html();
-		var newMessage = existingMessage+'<span>'+from+': </span>'+message+'<br>';
-		$('#gamemessages').html(newMessage);
-		$('#gamemessages').animate({scrollTop:$('#gamemessages').prop('scrollHeight')});
+		};
 	},
 	/* Message Box related code*/
 	messageBoxOkCallback:undefined,
@@ -354,37 +362,37 @@ var game = {
 	showMessageBox:function(message,onOK,onCancel){
 		// Set message box text
 		$('#messageboxtext').html(message);
-
+		
 		// Set message box ok and cancel handlers and enable buttons
 		if(!onOK){
-			game.messageBoxOkCallback = undefined;				
+			game.messageBoxOkCallback = undefined;
 		} else {
 			game.messageBoxOkCallback = onOK;
-		}	
-
+		}
 		if(!onCancel){
-			game.messageBoxCancelCallback = undefined;			
+			game.messageBoxCancelCallback = undefined;
 			$("#messageboxcancel").hide();
 		} else {
 			game.messageBoxCancelCallback = onCancel;
 			$("#messageboxcancel").show();
 		}
-
+	
 		// Display the message box and wait for user to click a button
-		$('#messageboxscreen').show();				
+		$('#messageboxscreen').show();
 	},
 	messageBoxOK:function(){
 		$('#messageboxscreen').hide();
 		if(game.messageBoxOkCallback){
 			game.messageBoxOkCallback()
-		}			
+		}
 	},
 	messageBoxCancel:function(){
 		$('#messageboxscreen').hide();
 		if(game.messageBoxCancelCallback){
 			game.messageBoxCancelCallback();
-		}			
+		}
 	},
+
 	// Methods for handling triggered events within the game
 	initTrigger:function(trigger){
 		if(trigger.type == "timed"){
@@ -408,11 +416,11 @@ var game = {
 		} else if (trigger.type == "conditional"){
 			//Check if the condition has been satisfied
 			if(trigger.condition()){
-				// Clear the trigger 
+				// Clear the trigger
 				game.clearTrigger(trigger);
 				// Call the trigger action
-				trigger.action(trigger);	
-			} 
+				trigger.action(trigger);
+			}
 		}
 	},
 	clearTrigger:function(trigger){
@@ -421,7 +429,7 @@ var game = {
 		} else if (trigger.type == "conditional"){
 			clearInterval(trigger.interval);
 		}
-	},	
+	},
 	end:function(){
 		// Clear Any Game Triggers
 		if (game.currentLevel.triggers){
@@ -429,6 +437,8 @@ var game = {
 				game.clearTrigger(game.currentLevel.triggers[i]);
 			};
 		}
-		game.running = false;	
+		game.running = false;
 	}
+
+	
 }

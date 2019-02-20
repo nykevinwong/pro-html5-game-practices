@@ -26,9 +26,10 @@ var buildings = {
 				{name:"damaged",count:1},
 				{name:"contructing",count:3},				
 			],
+		
 			processOrders:function(){
 				switch (this.orders.type){
-					case "construct-building":			
+					case "construct-building":
 						this.action="construct";
 						this.animationIndex = 0;
 						var itemDetails = this.orders.details;
@@ -36,11 +37,12 @@ var buildings = {
 						itemDetails.team = this.team;
 						itemDetails.action = "teleport";
 						var item = game.add(itemDetails);
-						game.cash[this.team] -= item.cost;														
+						game.cash[this.team] -= item.cost;
 						this.orders = {type:"stand"};
-						break;					
+						break;
 				}
 			}
+
 		},
 		"starport":{
 			name:"starport",
@@ -137,8 +139,8 @@ var buildings = {
 		"ground-turret":{
 			name:"ground-turret",
 			canAttack:true,
-			canTargetLand:true,
-			canTargetAir:false,	
+			canAttackLand:true,
+			canAttackAir:false,	
 			weaponType:"cannon-ball",		
 			action:"guard", // Default action is guard unlike other buildings
 			direction:0, // Face upward (0) by default
@@ -164,6 +166,60 @@ var buildings = {
 				{name:"healthy",count:1,directions:8},
 				{name:"damaged",count:1},
 			],
+			isValidTarget:isValidTarget,
+			findTargetsInSight:findTargetsInSight,
+			processOrders:function(){
+				if(this.reloadTimeLeft){
+					this.reloadTimeLeft--;
+				}
+				// damaged turret cannot attack
+				if(this.lifeCode != "healthy"){
+					return;
+				}
+				switch (this.orders.type){
+					case "guard":
+						var targets = this.findTargetsInSight();
+						if(targets.length>0){
+							this.orders = {type:"attack",to:targets[0]};
+						}
+						break;
+					case "attack":
+						if(!this.orders.to ||
+							this.orders.to.lifeCode == "dead" ||
+							!this.isValidTarget(this.orders.to) ||
+							(Math.pow(this.orders.to.x-this.x,2) + Math.pow(this.orders.to.y-this.y,2))>Math.pow(this.sight,2)
+							){
+			  
+							var targets = this.findTargetsInSight();
+							if(targets.length>0){
+								this.orders.to = targets[0];
+							} else {
+								this.orders = {type:"guard"};
+							}
+						}
+			  
+						if (this.orders.to){
+							var newDirection = findFiringAngle(this.orders.to,this,this.directions);
+							var difference = angleDiff(this.direction,newDirection,this.directions);
+							var turnAmount = this.turnSpeed*game.turnSpeedAdjustmentFactor;
+							if (Math.abs(difference)>turnAmount){
+								this.direction = wrapDirection(this.direction+turnAmount*Math.abs(difference)/difference,this.directions);
+								return;
+							} else {
+								this.direction = newDirection;
+								if(!this.reloadTimeLeft){
+									this.reloadTimeLeft = bullets.list[this.weaponType].reloadTime;
+									var angleRadians = -(Math.round(this.direction)/this.directions)*2*Math.PI ;               
+									var bulletX = this.x+0.5- (1*Math.sin(angleRadians));
+									var bulletY = this.y+0.5- (1*Math.cos(angleRadians));
+									var bullet = game.add({name:this.weaponType,type:"bullets", x:bulletX,
+			y:bulletY, direction:this.direction, target:this.orders.to});
+								}
+							}
+						}
+						break;
+				}
+			}
 		}
 	},
 	defaults:{
@@ -187,6 +243,22 @@ var buildings = {
 			}
 
 			switch (this.action){
+				case "open":
+				this.imageList = this.spriteArray["closing"];
+				// Opening is just the closing sprites running backwards
+				this.imageOffset = this.imageList.offset + this.imageList.count - this.animationIndex;
+				this.animationIndex++;
+				// Once opening is complete, go back to close
+				if (this.animationIndex>=this.imageList.count){
+					this.animationIndex = 0;
+					this.action = "close";
+					// If constructUnit has been set, add the new unit to the game
+					if(this.constructUnit){
+						game.add(this.constructUnit);
+						this.constructUnit = undefined;
+					}
+				}
+				 break;
 				case "stand":
 					this.imageList = this.spriteArray[this.lifeCode];
 					this.imageOffset = this.imageList.offset + this.animationIndex;
@@ -238,19 +310,15 @@ var buildings = {
 					if (this.animationIndex>=this.imageList.count){                
 					    this.animationIndex = 0;  
 						this.action = "close";
-						if(this.constructUnit){
-							game.add(this.constructUnit);
-							this.constructUnit = undefined;
-						}					
 					}
 					break;
-				case "deploy":
+					case "deploy":
 					this.imageList = this.spriteArray["deploy"];
 					this.imageOffset = this.imageList.offset + this.animationIndex;
 					this.animationIndex++;
 					// Once deploying is complete, go to harvest now
-					if (this.animationIndex>=this.imageList.count){                
-					    this.animationIndex = 0;  
+					if (this.animationIndex>=this.imageList.count){
+						this.animationIndex = 0;
 						this.action = "harvest";
 					}
 					break;
@@ -258,8 +326,8 @@ var buildings = {
 					this.imageList = this.spriteArray[this.lifeCode];
 					this.imageOffset = this.imageList.offset + this.animationIndex;
 					this.animationIndex++;
-					if (this.animationIndex>=this.imageList.count){                
-						this.animationIndex = 0;     
+					if (this.animationIndex>=this.imageList.count){
+						this.animationIndex = 0;
 						if (this.lifeCode == "healthy"){
 							// Harvesters mine 2 credits of cash per animation cycle
 							game.cash[this.team] += 2;
@@ -272,10 +340,11 @@ var buildings = {
 						this.imageList = this.spriteArray[this.lifeCode];
 					} else {
 						// The healthy turret has 8 directions
-						this.imageList = this.spriteArray[this.lifeCode+"-"+this.direction];
-					}				 	
-				    this.imageOffset = this.imageList.offset;
-					break;													
+						var direction = wrapDirection(Math.round(this.direction),this.directions);
+						this.imageList = this.spriteArray[this.lifeCode+"-"+ direction];
+					}
+					this.imageOffset = this.imageList.offset;
+					break;												
 			}	
 		},
 		drawLifeBar:function(){
