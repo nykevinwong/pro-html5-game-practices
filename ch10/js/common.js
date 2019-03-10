@@ -44,9 +44,7 @@ var loader = {
     	}
 
         // Check for ogg, then mp3, and finally set soundFileExtn to undefined
-        loader.soundFileExtn = oggSupport?".ogg":mp3Support?".mp3":undefined;
-        //alert('Audio Format supported '+loader.soundFileExtn);
-        
+        loader.soundFileExtn = oggSupport?".ogg":mp3Support?".mp3":undefined;        
     },
     loadImage:function(url){
         this.totalCount++;
@@ -58,21 +56,20 @@ var loader = {
         return image;
     },
     soundFileExtn:".ogg",
-    loadSound:function(){
-        this.totalCount++;
-        this.loaded = false;
-        $('#loadingscreen').show();
-        var audio = new Audio();
-        audio.src = url+loader.soundFileExtn;
-        image.onload = loader.itemLoaded;
-        return image;   
-    },
+	loadSound:function(url){
+		this.totalCount++;
+		this.loaded = false;
+		$('#loadingscreen').show();
+		var audio = new Audio();
+		audio.src = url+loader.soundFileExtn;
+		audio.addEventListener("canplaythrough", loader.itemLoaded, false);
+		return audio;   
+	},
     itemLoaded:function(){
         loader.loadedCount++;
         $('#loadingmessage').html('Loaded '+loader.loadedCount+' of '+loader.totalCount);
         if (loader.loadedCount === loader.totalCount){
             loader.loaded = true;
-            //alert('hiding');
             $('#loadingscreen').hide();
             if(loader.onload){
                 loader.onload();
@@ -375,4 +372,9 @@ function findTargetsInSight(increment){
    	});
 	
 	return targets;
+}
+
+function isItemDead(uid){
+	var item = game.getItemByUid(uid);
+	return (!item || item.lifeCode == "dead");
 }
