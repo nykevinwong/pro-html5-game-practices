@@ -100,6 +100,9 @@ var mouse = {
 		}
 	},
 	itemUnderMouse:function(){
+		if(fog.isPointOverFog(mouse.gameX,mouse.gameY)){
+			return;
+		}
 		for (var i = game.items.length - 1; i >= 0; i--){
 	        var item = game.items[i];
 	        if (item.type=="buildings" || item.type=="terrain"){

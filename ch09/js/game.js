@@ -130,7 +130,9 @@ var game = {
 	    game.sortedItems = $.extend([],game.items);        
 	   	game.sortedItems.sort(function(a,b){
 	        return b.y-a.y + ((b.y==a.y)?(a.x-b.x):0);
-	   	});
+		   });
+		   
+	    fog.animate();
 
 		game.lastAnimationTime = (new Date()).getTime();
 	},	
@@ -172,6 +174,9 @@ var game = {
 		for (var i = game.bullets.length - 1; i >= 0; i--){
 			game.bullets[i].draw();
 		};
+
+		fog.draw();
+		
 		// Draw the mouse 
 		mouse.draw()
 
