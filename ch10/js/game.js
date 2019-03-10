@@ -179,6 +179,11 @@ var game = {
 		if(item.type == "buildings" || item.type == "terrain"){
 			game.currentMapPassableGrid = undefined;
 		}
+
+		if (item.type == "bullets"){
+			sounds.play(item.name);
+		}
+		
 		return item;		
 	},
 	remove:function(item){
@@ -334,6 +339,7 @@ var game = {
 		}				
 	},
 	showMessage:function(from,message){
+		sounds.play('message-received');
 		var character = game.characters[from];		
 		if (character){
 			from = character.name;

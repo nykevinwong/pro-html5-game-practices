@@ -59,6 +59,7 @@ var mouse = {
 						};
 						if (uids.length>0){
 							game.sendCommand(uids,{type:"attack",toUid:clickedItem.uid});
+							sounds.play("acknowledge-attacking");
 						}
 					} else  { // Player right clicked on a friendly item
 						for (var i = game.selectedItems.length - 1; i >= 0; i--){
@@ -69,6 +70,7 @@ var mouse = {
 						};
 						if (uids.length>0){
 							game.sendCommand(uids,{type:"guard",toUid:clickedItem.uid});
+							sounds.play("acknowledge-moving");
 						}
 					}
 				} else if (clickedItem.name == "oilfield"){
@@ -83,6 +85,7 @@ var mouse = {
 					};
 					if (uids.length>0){					
 						game.sendCommand(uids,{type:"deploy",toUid:clickedItem.uid});
+						sounds.play("acknowledge-moving");
 					}
 				} 
 			} else { // Just try to move there
@@ -95,6 +98,7 @@ var mouse = {
 				};
 				if (uids.length>0){
 					game.sendCommand(uids,{type:"move",to:{x:mouse.gameX/game.gridSize,y:mouse.gameY/game.gridSize}});
+					sounds.play("acknowledge-moving");
 				}
 			}
 		}
