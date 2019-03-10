@@ -223,11 +223,34 @@ var vehicles = {
 			}
 			return true;
 		},
+		isValidTarget:isValidTarget,
+		findTargetsInSight:findTargetsInSight,
 		processOrders:function(){
 			this.lastMovementX = 0;
-		    this.lastMovementY = 0;
+		    this.lastMovementY = 0;	
+			if(this.reloadTimeLeft){
+				this.reloadTimeLeft--;
+			}		
 			var target;
 			switch (this.orders.type){
+				case "stand":
+					var targets = this.findTargetsInSight();
+					if(targets.length>0){
+						this.orders = {type:"attack",to:targets[0]};
+					}
+					break;
+				case "sentry":
+					var targets = this.findTargetsInSight(2);
+					if(targets.length>0){
+						this.orders = {type:"attack",to:targets[0],nextOrder:this.orders};
+					}
+					break;					
+				case "hunt":
+					var targets = this.findTargetsInSight(100);
+					if(targets.length>0){
+						this.orders = {type:"attack",to:targets[0],nextOrder:this.orders};
+					}
+					break;
 				case "move":
 					if ((Math.pow(this.orders.to.x-this.x,2) + Math.pow(this.orders.to.y-this.y,2))<Math.pow(this.radius/game.gridSize,2)) {						
 						//Stop when within one radius of the destination						
@@ -251,15 +274,84 @@ var vehicles = {
 								return;
 							}
 					    }
-		                  	var moving = this.moveTo(this.orders.to);
+		                var moving = this.moveTo(this.orders.to);
 						// Pathfinding couldn't find a path so stop
 						if(!moving){
 							this.orders = {type:"stand"};
 							return;
 						}
-		
+
 		            }												
 					break;
+				case "attack":
+					if(this.orders.to.lifeCode == "dead"){
+						if (this.orders.nextOrder){
+							this.orders = this.orders.nextOrder;
+						} else {
+							this.orders = {type:"float"};								
+						}
+						return;
+					}
+					if ((Math.pow(this.orders.to.x-this.x,2) + Math.pow(this.orders.to.y-this.y,2))<Math.pow(this.sight,2)) {						
+						//Turn towards target and then start attacking when within range of the target 
+						var newDirection = findFiringAngle(this.orders.to,this,this.directions);	
+						var difference = angleDiff(this.direction,newDirection,this.directions);											
+						var turnAmount = this.turnSpeed*game.turnSpeedAdjustmentFactor;	
+						if (Math.abs(difference)>turnAmount){
+							this.direction = wrapDirection(this.direction+turnAmount*Math.abs(difference)/difference,this.directions);				
+							return;
+						} else {
+							this.direction = newDirection;
+							if(!this.reloadTimeLeft){
+								this.reloadTimeLeft = bullets.list[this.weaponType].reloadTime;
+								var angleRadians = -(Math.round(this.direction)/this.directions)*2*Math.PI ; 
+								var bulletX = this.x- (this.radius*Math.sin(angleRadians)/game.gridSize);
+								var bulletY = this.y- (this.radius*Math.cos(angleRadians)/game.gridSize);
+								var bullet = game.add({name:this.weaponType,type:"bullets",x:bulletX,y:bulletY,direction:newDirection,target:this.orders.to});
+							}							
+						}					
+		            } else {						
+		                var moving = this.moveTo(this.orders.to);
+						// Pathfinding couldn't find a path so stop
+						if(!moving){
+							this.orders = {type:"stand"};
+							return;
+						}
+		            }												
+					break;
+				case "patrol":
+					var targets = this.findTargetsInSight(1);
+					if(targets.length>0){
+						this.orders = {type:"attack",to:targets[0],nextOrder:this.orders};
+						return;
+					}
+					if ((Math.pow(this.orders.to.x-this.x,2) + Math.pow(this.orders.to.y-this.y,2))<Math.pow(this.radius*4/game.gridSize,2)) {
+						var to = this.orders.to;
+						this.orders.to = this.orders.from;
+						this.orders.from = to;
+		            } else {
+		            	this.moveTo(this.orders.to);					
+		            }
+					break;
+				case "guard":
+					if(this.orders.to.lifeCode == "dead"){
+						if (this.orders.nextOrder){
+							this.orders = this.orders.nextOrder;
+						} else {
+							this.orders = {type:"float"};								
+						}
+						return;
+					}
+					if ((Math.pow(this.orders.to.x-this.x,2) + Math.pow(this.orders.to.y-this.y,2))<Math.pow(this.sight-2,2)) {
+						var targets = this.findTargetsInSight(1);
+						if(targets.length>0){
+							this.orders = {type:"attack",to:targets[0],nextOrder:this.orders};
+							return;
+						} 
+		            } else {
+		            	this.moveTo(this.orders.to);					
+		            }
+					break;										
 				case "deploy":
 					// If target is oil field, move to middle of oil field
 					var target = {x:this.orders.to.x+1,y:this.orders.to.y+0.5,type:"terrain"};

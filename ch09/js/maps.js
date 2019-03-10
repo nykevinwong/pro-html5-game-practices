@@ -28,39 +28,74 @@ var maps = {
 			"items":[
 				{"type":"buildings","name":"base","x":11,"y":14,"team":"blue"},
 				{"type":"buildings","name":"starport","x":18,"y":14,"team":"blue"},
-			
-				{"type":"vehicles","name":"harvester","x":16,"y":12,"team":"blue","direction":3, "uid":-1},
+
+				{"type":"vehicles","name":"harvester","x":16,"y":12,"team":"blue","direction":3},
 				{"type":"terrain","name":"oilfield","x":3,"y":5,"action":"hint"},
-			
+
 				{"type":"terrain","name":"bigrocks","x":19,"y":6},
 				{"type":"terrain","name":"smallrocks","x":8,"y":3},
-				
+
 				{"type":"vehicles","name":"scout-tank","x":26,"y":14,"team":"blue","direction":4},
-				{"type":"vehicles","name":"heavy-tank","x":26,"y":16,"team":"blue","direction":5},
+			    {"type":"vehicles","name":"heavy-tank","x":26,"y":16,"team":"blue","direction":5},
 				{"type":"aircraft","name":"chopper","x":20,"y":12,"team":"blue","direction":2},
-				{"type":"aircraft","name":"wraith","x":23,"y":12,"team":"blue","direction":3},
-				
+			    {"type":"aircraft","name":"wraith","x":23,"y":12,"team":"blue","direction":3},
+
+
 				{"type":"buildings","name":"ground-turret","x":15,"y":23,"team":"green"},
 				{"type":"buildings","name":"ground-turret","x":20,"y":23,"team":"green"},
-				
-				{"type":"vehicles","name":"scout-tank","x":16,"y":26,"team":"green","direction":4},
-				{"type":"vehicles","name":"heavy-tank","x":18,"y":26,"team":"green","direction":6},
-				{"type":"aircraft","name":"chopper","x":20,"y":27,"team":"green","direction":2},
-				{"type":"aircraft","name":"wraith","x":22,"y":28,"team":"green","direction":3},
-			
+
+				{"type":"vehicles","name":"scout-tank","x":16,"y":26,"team":"green","direction":4,"orders":{"type":"sentry"}},	
+				{"type":"vehicles","name":"heavy-tank","x":18,"y":26,"team":"green","direction":6,"orders":{"type":"sentry"}},			
+				{"type":"aircraft","name":"chopper","x":20,"y":27,"team":"green","direction":2,"orders":{"type":"hunt"}},
+			    {"type":"aircraft","name":"wraith","x":22,"y":28,"team":"green","direction":3,"orders":{"type":"hunt"}},
+
 				{"type":"buildings","name":"base","x":19,"y":28,"team":"green"},
-				{"type":"buildings","name":"starport","x":15,"y":28,"team":"green"},
-			],
-			
+				{"type":"buildings","name":"starport","x":15,"y":28,"team":"green","uid":-1},
+			],	
+
 			/* Economy Related*/
 			"cash":{
 				"blue":5000,
 				"green":1000
-			},
+			},	
 
 			/* Conditional and Timed Trigger Events */
 			"triggers":[
-			],
+			/* Timed Events*/
+				{"type":"timed","time":1000,
+			        "action":function(){
+			            game.sendCommand([-1],{type:"construct-unit",details:{type:"aircraft",name:"wraith",orders:{"type":"patrol","from":{"x":22,"y":30},"to":{"x":15,"y":21}}}});
+			        }
+			    },
+			    {"type":"timed","time":5000,
+			        "action":function(){
+			            game.sendCommand([-1],{type:"construct-unit",details:{type:"aircraft",name:"chopper",orders:{"type":"patrol","from":{"x":15,"y":30},"to":{"x":22,"y":21}}}});
+			        }
+			    },
+			    {"type":"timed","time":10000,
+			        "action":function(){
+			            game.sendCommand([-1],{type:"construct-unit",details:{type:"vehicles",name:"heavy-tank",orders:{"type":"patrol","from":{"x":15,"y":30},"to":{"x":22,"y":21}}}});
+			        }
+			    },
+			    {"type":"timed","time":15000,
+			        "action":function(){
+			            game.sendCommand([-1],{type:"construct-unit",details:{type:"vehicles",name:"scout-tank",orders:{"type":"patrol","from":{"x":22,"y":30},"to":{"x":15,"y":21}}}});
+			        }
+			    },
+			    {"type":"timed","time":60000,
+			        "action":function(){
+						game.showMessage("AI","Now every enemy unit is going to attack you in a wave.");
+						var units = [];
+						for (var i=0; i < game.items.length; i++) {
+							var item = game.items[i];
+							if (item.team == "green" && (item.type == "vehicles"|| item.type == "aircraft")){
+								units.push(item.uid);
+							}
+						};
+						game.sendCommand(units,{type:"hunt"});			            
+			        }
+			    },
+			],	
 		}
 	]
 }
