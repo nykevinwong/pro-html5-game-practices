@@ -1,13 +1,13 @@
 var maps = {
 	"singleplayer":[
 		{
-			"name":"Entities",
-			"briefing": "In this level you will start commanding units and moving them around the map.",			
+			"name":"Rescue",
+			"briefing": "In the months since the great war, mankind has fallen into chaos. Billions are dead with cities in ruins.\nSmall groups of survivors band together to try and survive as best as they can.\nWe are trying to reach out to all the survivors in this sector before we join back with the main colony.",			
 			
 			/* Map Details */
-			"mapImage":"images/maps/level-one-debug-grid.png",			
-			"startX":2,
-			"startY":3,
+			"mapImage":"images/maps/level-one.png",			
+			"startX":36,
+			"startY":0,
 			
 			/* Map coordinates that are obstructed by terrain*/
 			"mapGridWidth":60,
@@ -18,83 +18,105 @@ var maps = {
 			
 			/* Entities to be loaded */
 			"requirements":{
-				"buildings":["base","starport","harvester","ground-turret"],
-				"vehicles":["transport","harvester","scout-tank","heavy-tank"],
-				"aircraft":["chopper","wraith"],
-				"terrain":["oilfield","bigrocks","smallrocks"]
+				"buildings":["base"],
+				"vehicles":["transport","scout-tank","heavy-tank"],
+				"aircraft":[],
+				"terrain":[]
 			},
-
-			/* Entities to be added */
-			"items":[
-				{"type":"buildings","name":"base","x":11,"y":14,"team":"blue"},
-				{"type":"buildings","name":"starport","x":18,"y":14,"team":"blue"},
-
-				{"type":"vehicles","name":"harvester","x":16,"y":12,"team":"blue","direction":3},
-				{"type":"terrain","name":"oilfield","x":3,"y":5,"action":"hint"},
-
-				{"type":"terrain","name":"bigrocks","x":19,"y":6},
-				{"type":"terrain","name":"smallrocks","x":8,"y":3},
-
-				{"type":"vehicles","name":"scout-tank","x":26,"y":14,"team":"blue","direction":4},
-			    {"type":"vehicles","name":"heavy-tank","x":26,"y":16,"team":"blue","direction":5},
-				{"type":"aircraft","name":"chopper","x":20,"y":12,"team":"blue","direction":2},
-			    {"type":"aircraft","name":"wraith","x":23,"y":12,"team":"blue","direction":3},
-
-
-				{"type":"buildings","name":"ground-turret","x":15,"y":23,"team":"green"},
-				{"type":"buildings","name":"ground-turret","x":20,"y":23,"team":"green"},
-
-				{"type":"vehicles","name":"scout-tank","x":16,"y":26,"team":"green","direction":4,"orders":{"type":"sentry"}},	
-				{"type":"vehicles","name":"heavy-tank","x":18,"y":26,"team":"green","direction":6,"orders":{"type":"sentry"}},			
-				{"type":"aircraft","name":"chopper","x":20,"y":27,"team":"green","direction":2,"orders":{"type":"hunt"}},
-			    {"type":"aircraft","name":"wraith","x":22,"y":28,"team":"green","direction":3,"orders":{"type":"hunt"}},
-
-				{"type":"buildings","name":"base","x":19,"y":28,"team":"green"},
-				{"type":"buildings","name":"starport","x":15,"y":28,"team":"green","uid":-1},
-			],	
 
 			/* Economy Related*/
 			"cash":{
-				"blue":5000,
-				"green":1000
+				"blue":0,
+				"green":0
 			},	
+
+			/* Entities to be added */
+			"items":[
+				/* Slightly damaged base */
+				{"type":"buildings","name":"base","x":55,"y":6,"team":"blue","life":100},				
+
+				{"type":"vehicles","name":"heavy-tank","x":57,"y":12,"direction":4,"team":"blue","uid":-1},
+
+				/* Two transport vehicles waiting just outside the visible map */
+				{"type":"vehicles","name":"transport","x":-3,"y":2,"direction":2,"team":"blue","uid":-3,"selectable":false},
+				{"type":"vehicles","name":"transport","x":-3,"y":4,"direction":2,"team":"blue","uid":-4,"selectable":false},
+
+				/* Two damaged enemy scout-tanks patroling the area*/
+				{"type":"vehicles","name":"scout-tank","x":40,"y":20,"direction":4,"team":"green","uid":-2,"life":20,"orders":{"type":"patrol","from":{"x":34,"y":20},"to":{"x":42,"y":25}}},								
+				{"type":"vehicles","name":"scout-tank","x":14,"y":0,"direction":4,"team":"green","uid":-5,"life":20,"orders":{"type":"patrol","from":{"x":14,"y":0},"to":{"x":14,"y":14}}},
+				
+			],	
+
 
 			/* Conditional and Timed Trigger Events */
 			"triggers":[
-			/* Timed Events*/
-				{"type":"timed","time":1000,
+			    {"type":"timed","time":3000,
 			        "action":function(){
-			            game.sendCommand([-1],{type:"construct-unit",details:{type:"aircraft",name:"wraith",orders:{"type":"patrol","from":{"x":22,"y":30},"to":{"x":15,"y":21}}}});
-			        }
-			    },
-			    {"type":"timed","time":5000,
-			        "action":function(){
-			            game.sendCommand([-1],{type:"construct-unit",details:{type:"aircraft",name:"chopper",orders:{"type":"patrol","from":{"x":15,"y":30},"to":{"x":22,"y":21}}}});
+						game.showMessage("op", "Commander!! We haven't heard from the last convoy in over two hours. They should have arrived by now.");		            
 			        }
 			    },
 			    {"type":"timed","time":10000,
 			        "action":function(){
-			            game.sendCommand([-1],{type:"construct-unit",details:{type:"vehicles",name:"heavy-tank",orders:{"type":"patrol","from":{"x":15,"y":30},"to":{"x":22,"y":21}}}});
+						game.showMessage("op", "They were last seen in the North West Sector. Could you investigate?");		            
 			        }
 			    },
-			    {"type":"timed","time":15000,
+			    {"type":"conditional",
+			        "condition":function(){
+						return(isItemDead(-1)||isItemDead(-3)||isItemDead(-4));
+			        },
 			        "action":function(){
-			            game.sendCommand([-1],{type:"construct-unit",details:{type:"vehicles",name:"scout-tank",orders:{"type":"patrol","from":{"x":22,"y":30},"to":{"x":15,"y":21}}}});
+			            singleplayer.endLevel(false);
 			        }
-			    },
-			    {"type":"timed","time":60000,
+			    },	
+			   {"type":"conditional",
+			        "condition":function(){
+						// Check if first enemy is dead
+						return isItemDead(-2);
+			        },
 			        "action":function(){
-						game.showMessage("AI","Now every enemy unit is going to attack you in a wave.");
-						var units = [];
-						for (var i=0; i < game.items.length; i++) {
-							var item = game.items[i];
-							if (item.team == "green" && (item.type == "vehicles"|| item.type == "aircraft")){
-								units.push(item.uid);
-							}
-						};
-						game.sendCommand(units,{type:"hunt"});			            
+						game.showMessage("op", "The rebels have been getting very aggressive lately. I hope the convoy is safe. Find them and escort them back to the base.");		            				
 			        }
 			    },
+				{"type":"conditional",
+					"condition":function(){
+						// Check if first enemy is dead
+						return isItemDead(-2);
+					},
+					"action":function(){
+						game.showMessage("op", "The rebels have been getting very aggressive lately. I hope the convoy is safe. Find them and escort them back to the base.");		            				
+					}
+				},
+				{"type":"conditional",
+					"condition":function(){
+						var hero = game.getItemByUid(-1);
+						return(hero && hero.x<30 && hero.y<30);
+					},
+					"action":function(){
+						game.showMessage("driver", "Can anyone hear us? Our convoy has been pinned down by rebel tanks. We need help.");		            					
+					}
+				},		 
+				{"type":"conditional",
+					"condition":function(){
+						var hero = game.getItemByUid(-1);
+						return(hero && hero.x<10 && hero.y<10);
+					},
+					"action":function(){
+						var hero = game.getItemByUid(-1);
+						game.showMessage("driver", "Thank you. We thought we would never get out of here alive.");		            					
+						game.sendCommand([-3,-4],{type:"guard",to:hero});
+					}
+				},
+				{"type":"conditional",
+					"condition":function(){
+						var transport1 = game.getItemByUid(-3);
+						var transport2 = game.getItemByUid(-4);
+						return(transport1 && transport2 && transport1.x>52 && transport2.x>52 && transport2.y<18 && transport1.y<18);
+					},
+					"action":function(){
+						singleplayer.endLevel(true);
+					}
+				},
+						
 			],	
 		}
 	]

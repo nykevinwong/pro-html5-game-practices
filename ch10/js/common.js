@@ -80,6 +80,11 @@ var loader = {
     }
 }
 
+function isItemDead(uid){
+    var item = game.getItemByUid(uid);
+    return (!item || item.lifeCode == "dead");
+}
+
 /* The default load() method used by all our game entities*/
 function loadItem(name){
 	var item = this.list[name];

@@ -183,7 +183,7 @@ var game = {
 		if (item.type == "bullets"){
 			sounds.play(item.name);
 		}
-		
+
 		return item;		
 	},
 	remove:function(item){
@@ -336,7 +336,19 @@ var game = {
 		"system":{
 			"name":"System",
 			"image":"images/characters/system.png"
-		}				
+		},
+		"op":{
+			"name":"Operator",
+			"image":"images/characters/girl1.png"
+		},
+		"pilot":{
+			"name":"Pilot",
+			"image":"images/characters/girl2.png"
+		},
+		"driver":{
+			"name":"Driver",
+			"image":"images/characters/man1.png"
+		}
 	},
 	showMessage:function(from,message){
 		sounds.play('message-received');
