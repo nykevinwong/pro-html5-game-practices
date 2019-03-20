@@ -8,6 +8,7 @@
 		<script src="js/game.js" type="text/javascript" charset="utf-8"></script>
 		<script src="js/mouse.js" type="text/javascript" charset="utf-8"></script>		
 		<script src="js/singleplayer.js" type="text/javascript" charset="utf-8"></script>
+		<script src="js/multiplayer.js" type="text/javascript" charset="utf-8"></script>
 		<script src="js/maps.js" type="text/javascript" charset="utf-8"></script>
 
 		<!-- Definitions for game entities -->		
@@ -36,6 +37,12 @@
 				<input type="button" id="exitmission" onclick = "singleplayer.exit();">
 				<div id="missonbriefing">Welcome to your first mission.
 				</div>
+			</div>
+			<div id="multiplayerlobbyscreen" class="gamelayer">
+				<select id="multiplayergameslist" size="10">
+				</select>
+				<input type="button" id="multiplayerjoin" onclick="multiplayer.join();">
+				<input type="button" id="multiplayercancel" onclick="multiplayer.cancel();">
 			</div>
 			<div id="gameinterfacescreen" class="gamelayer">
 			    <div id="gamemessages"></div>        
