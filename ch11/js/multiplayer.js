@@ -29,6 +29,12 @@ var multiplayer = {
             case "joined_room":
                 multiplayer.roomId = messageObject.roomId;
                 multiplayer.color = messageObject.color;
+                break;
+            case "init_level":
+            multiplayer.initMultiplayerLevel(messageObject);
+            break;
+            case "start_game":
+            multiplayer.startGame();
             break;
         }
     },
@@ -84,5 +90,91 @@ var multiplayer = {
         // Show the starting menu layer
         $('.gamelayer').hide();
         $('#gamestartscreen').show();
+    },
+    currentLevel: 0,
+    initMultiplayerLevel:function(messageObject) {
+        multiplayer.currentLevel = messageObject.level;
+
+        var level = maps.multiplayer[multiplayer.currentLevel];
+        		// Load all the assets for the level
+        game.currentMapImage = loader.loadImage(level.mapImage);
+        game.currentLevel = level;
+        
+        // Initialize multiplayer related variables
+        multiplayer.commands = [[]];
+        multiplayer.lastReceivedTick = 0;
+        multiplayer.currentTick = 0;
+                
+        game.team = multiplayer.color;
+        $('.gamelayer').hide();
+        var spawnLocations = messageObject.spawnLocations;
+
+        		// Load level Requirements 
+		game.resetArrays();
+		for (var type in level.requirements){
+	           var requirementArray = level.requirements[type];
+	           for (var i=0; i < requirementArray.length; i++) {
+	               var name = requirementArray[i];
+	               if (window[type]){
+	                   window[type].load(name);
+	               } else {
+	                   console.log('Could not load type :',type);
+	               }
+	           };
+	       }
+
+		for (var i = level.items.length - 1; i >= 0; i--){
+			var itemDetails = level.items[i];
+			game.add(itemDetails);
+        };		
+        
+            // Add starting items for both teams at their respective spawn locations
+    for (team in spawnLocations){
+        var spawnIndex = spawnLocations[team];
+        for (var i=0; i < level.teamStartingItems.length; i++) {
+            var itemDetails = $.extend(true,{},level.teamStartingItems[i]);
+            itemDetails.x += level.spawnLocations[spawnIndex].x+itemDetails.x;
+            itemDetails.y += level.spawnLocations[spawnIndex].y+itemDetails.y;
+            itemDetails.team = team;
+            game.add(itemDetails);
+        };
+         
+        if (team==game.team){
+            game.offsetX = level.spawnLocations[spawnIndex].startX*game.gridSize;
+            game.offsetY = level.spawnLocations[spawnIndex].startY*game.gridSize;
+        }
+    }
+    
+        		// Create a grid that stores all obstructed tiles as 1 and unobstructed as 0
+	    game.currentMapTerrainGrid = [];
+	    for (var y=0; y < level.mapGridHeight; y++) {
+	        game.currentMapTerrainGrid[y] = [];
+	       	for (var x=0; x< level.mapGridWidth; x++) {
+				game.currentMapTerrainGrid[y][x] = 0;
+			}
+	    };
+		for (var i = level.mapObstructedTerrain.length - 1; i >= 0; i--){			
+			var obstruction = level.mapObstructedTerrain[i];
+			game.currentMapTerrainGrid[obstruction[1]][obstruction[0]] = 1;
+		};
+		game.currentMapPassableGrid = undefined;
+	
+		// Load Starting Cash For Game
+		game.cash = $.extend([],level.cash);
+	
+		// Enable the enter mission button once all assets are loaded
+		if (loader.loaded){
+            multiplayer.sendWebSocketMessage({type:"initialized_level"});
+		} else {
+			loader.onload = function(){
+                multiplayer.sendWebSocketMessage({type:"initialized_level"});
+			}
+		}
+         
+    },
+    startGame:function(){
+        fog.initLevel();
+        game.animationLoop();
+        game.start();
     },
 };

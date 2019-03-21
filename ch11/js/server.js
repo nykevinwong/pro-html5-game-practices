@@ -44,13 +44,27 @@ wsServer.on('request', function(request) {
             switch(clientMessage.type)
             {
                 case "join_room":
-                joinRoom(websocket, clientMessage.roomId);
+                var room = joinRoom(websocket, clientMessage.roomId);
                 sendRoomList(sockets);
+
+                if(room.players.length==2) // start the game when at least 2 palyer is joined.
+                {
+                    initGame(room);
+                }
+
                 break;
                 case "leave_room":
                 leaveRoom(websocket, clientMessage.roomId);
                 sendRoomList(sockets);
                 break;
+                case "initialized_level":
+                websocket.room.playersReady++;
+                if (websocket.room.playersReady==2){
+                    startGame(websocket.room);
+                }
+                break;
+                default:
+                console.log("no actino for message type: " + clientMessage.type);
             }
 
         }
@@ -81,12 +95,14 @@ wsServer.on('request', function(request) {
 function joinRoom(socket, roomId) {
     var room = gameRooms[roomId-1];
     socket.roomId = roomId;
+    socket.room = room;
     room.players.push(socket);   
     var color = updateRoomStatus(room);
     socket.color = color;
 
     console.log("connection [" + socket.id  + "] joined the room.");
     socket.send(JSON.stringify({type:"joined_room", roomId: roomId, color: socket.color}));
+    return room;
 }
 
 function leaveRoom(socket, roomId) {
@@ -137,4 +153,31 @@ function sendRoomList(sockets) {
 
     for(var i=0;i<sockets.length;i++)
     sockets[i].send(JSON.stringify(clientMessage));
+}
+
+function sendRoomWebSocketMessage(room,messageObject){
+    var messageString = JSON.stringify(messageObject);
+    for (var i = room.players.length - 1; i >= 0; i--){
+        room.players[i].send(messageString);
+    };
+}
+
+function initGame(room)
+{
+    room.playersReady = 0;
+    var locationCandidate = [0,1,2,3];
+    var locations = { 
+        "blue": locationCandidate.splice(Math.floor(Math.random()*locationCandidate.length) ,1),
+        "green": locationCandidate.splice(Math.floor(Math.random()*locationCandidate.length) ,1)
+    };
+    var currentLevel = 0;
+    sendRoomWebSocketMessage(room, { type:"init_level", spawnLocations: locations, level: currentLevel });
+}
+
+function startGame(room)
+{
+    room.status = "running";
+    sendRoomList(sockets);
+    sendRoomWebSocketMessage(room, { type:"start_game"});
+    
 }
