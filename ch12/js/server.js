@@ -35,8 +35,11 @@ wsServer.on('request', function(request) {
     websocket.id = ++count;
     sendRoomList([websocket]); // send the room list to first-time joinner.
 
+    websocket.latencyTrips = new Array();
+    measureLatency(websocket);
+
     sockets.push(websocket);
-    
+
     websocket.on('message', function(message){
         if(message.type === 'utf8') {
             console.log("Received Message [" + websocket.id  + "]:" + message.utf8Data);
@@ -44,25 +47,43 @@ wsServer.on('request', function(request) {
             switch(clientMessage.type)
             {
                 case "join_room":
-                var room = joinRoom(websocket, clientMessage.roomId);
-                sendRoomList(sockets);
+                    var room = joinRoom(websocket, clientMessage.roomId);
+                    sendRoomList(sockets);
 
-                if(room.players.length==2) // start the game when at least 2 palyer is joined.
-                {
-                    initGame(room);
-                }
+                    if(room.players.length==2) // start the game when at least 2 palyer is joined.
+                    {
+                        initGame(room);
+                    }
 
-                break;
+                    break;
                 case "leave_room":
-                leaveRoom(websocket, clientMessage.roomId);
-                sendRoomList(sockets);
-                break;
+                    leaveRoom(websocket, clientMessage.roomId);
+                    sendRoomList(sockets);
+                    break;
                 case "initialized_level":
-                websocket.room.playersReady++;
-                if (websocket.room.playersReady==2){
-                    startGame(websocket.room);
-                }
-                break;
+                    websocket.room.playersReady++;
+                    if (websocket.room.playersReady==2){
+                        startGame(websocket.room);
+                    }
+                    break;
+                case "latency_pong":
+                
+                    calculateAverageLatency(websocket);
+
+                    if(websocket.latencyTrips.length < 3)
+                    measureLatency(websocket);
+
+                    break;
+                case "command":
+                    if(websocket.room && websocket.room.status == "running")
+                     {
+                        if(clientMessage.uids) {
+                            websocket.room.commands.push({uids:clientMessage.uids, details:clientMessage.details});
+                        }
+                        websocket.room.lastTickConfirmed[websocket.color] =  clientMessage.currentTick + websocket.tickLag;
+                        console.log("lastTickConfirmed[" + websocket.color + "]:" + websocket.room.lastTickConfirmed[websocket.color]);
+                     }
+                     break;
                 default:
                 console.log("no actino for message type: " + clientMessage.type);
             }
@@ -180,4 +201,64 @@ function startGame(room)
     sendRoomList(sockets);
     sendRoomWebSocketMessage(room, { type:"start_game"});
     
+    room.commands = [];
+    room.lastTickConfirmed = {"blue":0,"green":0};
+    room.currentTick = 0;
+  
+    // Calculate tick lag for room as the max of both player's tick lags
+    var roomTickLag = Math.max(room.players[0].tickLag,room.players[1].tickLag);
+    
+    room.interval = setInterval(function(){
+    // Confirm that both players have send in commands for up to present tick
+    if(room.lastTickConfirmed["blue"] >= room.currentTick && room.lastTickConfirmed["green"] >= room.currentTick){
+        // Commands should be executed after the tick lag
+        sendRoomWebSocketMessage(room,{type:"game_tick", tick:room.currentTick+roomTickLag, commands:room.commands});
+        room.currentTick++;
+        room.commands = [];
+    } else {
+        // One of the players is causing the game to lag. Handle appropriately
+        if(room.lastTickConfirmed["blue"] < room.currentTick){
+            var logtext = "Room" + room.roomId +"Blue is lagging on Tick:" + room.currentTick+ "by" + room.currentTick-room.lastTickConfirmed["blue"];
+            if(room.logtext &&  room.logtext != logtext)
+            {
+                console.log(logtext);
+            }
+            room.logtext = logtext;
+        }
+        if(room.lastTickConfirmed["green"] < room.currentTick){
+            var logtext = "Room" + room.roomId +"Green is lagging on Tick:" + room.currentTick+ "by" + room.currentTick-room.lastTickConfirmed["green"];
+            if(room.logtext &&  room.logtext != logtext)
+                {
+                    console.log(logtext);
+                }
+                room.logtext = logtext;
+        }
+    }
+    },100);
+}
+
+function measureLatency(socket)
+{
+    var measurement = {start:Date.now()};
+    socket.latencyTrips.push(measurement)
+    var clientMessage = {type:"latency_ping"};
+    socket.send(JSON.stringify(clientMessage));
+}
+
+function calculateAverageLatency(socket){
+    var measurement = socket.latencyTrips[socket.latencyTrips.length-1];
+    measurement.end = Date.now();
+    measurement.roundTrip = measurement.end - measurement.start;
+    socket.averageLatency = 0;
+
+    for(var i=0;i < socket.latencyTrips.length-1;i++)
+    {
+        var measurement = socket.latencyTrips[i];
+        console.log(i + " => start:" + measurement.start + ", end:" + measurement.end + ", current round trip:" + measurement.roundTrip)
+        socket.averageLatency += socket.latencyTrips[i].roundTrip/2;
+    }
+
+    socket.averageLatency = socket.averageLatency /socket.latencyTrips.length;
+    socket.tickLag = Math.round(socket.averageLatency * 0.02) + 1;
+    console.log("Measuring Latency for player. Attempt", socket.latencyTrips.length, "- Average Latency:",socket.averageLatency, "Tick Lag:", socket.tickLag); 
 }

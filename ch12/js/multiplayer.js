@@ -3,20 +3,21 @@ var multiplayer = {
     websocket_url:"ws://localhost:8080/",
     websocket:undefined,
     start:function(){
-        game.type = "multiplayer";
-        var WebSocketObject = window.WebSocket || window.MozWebSocket;
-        if (!WebSocketObject){
-            game.showMessageBox("Your browser does not support WebSocket. Multiplayer will not work.");
-            return;
-        }
-        this.websocket = new WebSocketObject(this.websocket_url);
-        this.websocket.onmessage = multiplayer.handleWebSocketMessage;
-        // Display multiplayer lobby screen after connecting
-        this.websocket.onopen = function(){
-            // Hide the starting menu layer
-            $('.gamelayer').hide();
-            $('#multiplayerlobbyscreen').show();
-        }
+
+            game.type = "multiplayer";
+            var WebSocketObject = window.WebSocket || window.MozWebSocket;
+            if (!WebSocketObject){
+                game.showMessageBox("Your browser does not support WebSocket. Multiplayer will not work.");
+                return;
+            }
+            this.websocket = new WebSocketObject(this.websocket_url);
+            this.websocket.onmessage = multiplayer.handleWebSocketMessage;
+            // Display multiplayer lobby screen after connecting
+            this.websocket.onopen = function(){
+                // Hide the starting menu layer
+                $('.gamelayer').hide();
+                $('#multiplayerlobbyscreen').show();
+            }
 
 
     },
@@ -35,6 +36,14 @@ var multiplayer = {
             break;
             case "start_game":
             multiplayer.startGame();
+            break;
+            case "latency_ping":
+            var delay = Math.random()*2 * 1000;           
+            setTimeout(
+                function()
+                {
+            multiplayer.sendWebSocketMessage({type:"latency_pong"});
+                }, delay);
             break;
         }
     },
@@ -176,5 +185,8 @@ var multiplayer = {
         fog.initLevel();
         game.animationLoop();
         game.start();
+    },
+    sendCommand:function(uids,details) {
+        multiplayer.sendWebSocketMessage({type:"command", uids:uids, details:details, currentTick:multiplayer.currentTick});
     },
 };
